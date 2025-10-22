@@ -199,15 +199,21 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
     callbacks: {
       ...authOptions.callbacks,
       signIn: async ({ user }) => {
-        if (!user.email || (await isBlacklistedEmail(user.email))) {
-          await identifyUser(user.email ?? user.id);
-          await trackAnalytics({
-            event: "User Sign In Attempted",
-            email: user.email ?? undefined,
-            userId: user.id,
-          });
+        
+        if (!user.email) {
+          console.log("getAuthOptions user email")
           return false;
         }
+        
+        // if (!user.email || (await isBlacklistedEmail(user.email))) {
+        //   await identifyUser(user.email ?? user.id);
+        //   await trackAnalytics({
+        //     event: "User Sign In Attempted",
+        //     email: user.email ?? undefined,
+        //     userId: user.id,
+        //   });
+        //   return false;
+        // }
 
         // Apply rate limiting for signin attempts
         try {
