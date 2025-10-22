@@ -56,7 +56,7 @@ export const sendEmail = async ({
   //           ? "Marc Seitz <marc@papermark.io>"
   //           : "Marc from Papermark <marc@papermark.io>");
 
-  const fromAddress = "Test from Papermark <test@staging-pfnexus.com>"
+  const fromAddress = "Test from Papermark <test@resend.staging-pfnexus.com>"
   try {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
