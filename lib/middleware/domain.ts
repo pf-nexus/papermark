@@ -26,12 +26,13 @@ export default async function DomainMiddleware(req: NextRequest) {
       );
     }
 
+    //Didn't work
     // Add this for your domain
-    if (host === "datarooms.staging-pfnexus.com") {
-      return NextResponse.redirect(
-        new URL("https://datarooms.staging-pfnexus.com/dashboard", req.url),
-      );
-    }
+    // if (host === "datarooms.staging-pfnexus.com") {
+    //   return NextResponse.redirect(
+    //     new URL("https://datarooms.staging-pfnexus.com/dashboard", req.url),
+    //   );
+    // }
 
     return NextResponse.redirect(
       new URL("https://www.papermark.com/home", req.url),
