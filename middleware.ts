@@ -52,6 +52,23 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   const path = req.nextUrl.pathname;
   const host = req.headers.get("host");
 
+  // NEW: Check for PF Nexus session (staging)
+  const sessionId = req.cookies.get('sessionId');
+  const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') || 
+                        req.cookies.get('next-auth.session-token');
+  
+  // Only check on datarooms subdomain
+  if (host?.includes('datarooms.staging-pfnexus.com') && 
+      sessionId && 
+      !nextAuthToken && 
+      !path.startsWith('/api/auth')) {
+    // Has PF Nexus session but no NextAuth session
+    // Redirect to NextAuth callback to create session
+    return NextResponse.redirect(
+      new URL(`/api/auth/callback/pfnexus`, req.url)
+    );
+  }
+
   if (isAnalyticsPath(path)) {
     return PostHogMiddleware(req);
   }

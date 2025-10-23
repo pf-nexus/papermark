@@ -111,6 +111,38 @@ export const authOptions: NextAuthOptions = {
         return user;
       },
     }),
+    {
+      id: "pfnexus",
+      name: "PF Nexus",
+      type: "credentials",
+      credentials: {},
+      async authorize(credentials, req) {
+        // Get the sessionId cookie from the request
+        const cookies = req.headers?.cookie;
+        const sessionId = cookies?.match(/sessionId=([^;]+)/)?.[1];
+        
+        if (!sessionId) return null;
+        
+        // Validate with PF Nexus backend (staging)
+        const response = await fetch('https://api.staging-pfnexus.com/access/session', {
+          headers: {
+            Cookie: `sessionId=${sessionId}`
+          }
+        });
+        
+        if (!response.ok) return null;
+        
+        const { user } = await response.json();
+        
+        // Map to NextAuth user format
+        return {
+          id: user.id.toString(),
+          email: user.email,
+          name: `${user.firstname} ${user.lastname}`,
+          image: null,
+        };
+      },
+    },
   ],
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -122,7 +154,14 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         // When working on localhost, the cookie domain must be omitted entirely (https://stackoverflow.com/a/1188145)
-        domain: VERCEL_DEPLOYMENT ? ".papermark.com" : undefined,
+        //domain: VERCEL_DEPLOYMENT ? ".papermark.com" : undefined,
+        domain: VERCEL_DEPLOYMENT ? ".staging-pfnexus.com" : undefined,
+        // Update domain for staging
+        // domain: VERCEL_DEPLOYMENT 
+        //   ? (process.env.VERCEL_ENV === "production" 
+        //       ? ".papermark.com" 
+        //       : ".staging-pfnexus.com")  // NEW: Use staging domain
+        //  : undefined,
         secure: VERCEL_DEPLOYMENT,
       },
     },
