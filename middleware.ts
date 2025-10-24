@@ -1,5 +1,7 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
+import { getToken } from "next-auth/jwt";
+
 import AppMiddleware from "@/lib/middleware/app";
 import DomainMiddleware from "@/lib/middleware/domain";
 
@@ -8,7 +10,6 @@ import IncomingWebhookMiddleware, {
   isWebhookPath,
 } from "./lib/middleware/incoming-webhooks";
 import PostHogMiddleware from "./lib/middleware/posthog";
-import { getToken } from "next-auth/jwt";
 
 function isAnalyticsPath(path: string) {
   // Create a regular expression
@@ -55,13 +56,13 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
 
   // NEW: Check for PF Nexus session (staging)
   // const sessionId = req.cookies.get('sessionId');
-  // const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') || 
+  // const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') ||
   //                       req.cookies.get('next-auth.session-token');
-  
+
   // Only check on datarooms subdomain
-  // if (host?.includes('datarooms.staging-pfnexus.com') && 
-  //     sessionId && 
-  //     !nextAuthToken && 
+  // if (host?.includes('datarooms.staging-pfnexus.com') &&
+  //     sessionId &&
+  //     !nextAuthToken &&
   //     !path.startsWith('/api/auth')) {
   //   // Has PF Nexus session but no NextAuth session
   //   // Redirect to NextAuth callback to create session
@@ -69,19 +70,71 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   //     new URL(`/api/auth/callback/pfnexus`, req.url)
   //   );
   // }
-  const sessionId = req.cookies.get('sessionId')?.value;
+
+  // Test 2
+  // const sessionId = req.cookies.get('sessionId')?.value;
+
+  // if (host?.includes('datarooms.staging-pfnexus.com') &&
+  //     sessionId &&
+  //     !path.startsWith('/api/') &&
+  //     !path.startsWith('/_next/') &&
+  //     path !== '/pfnexus-auto-signin') {
+
+  //   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  //   if (!token) {
+  //     // Redirect to a page that will trigger signin
+  //     return NextResponse.redirect(new URL('/pfnexus-auto-signin', req.url));
+  //   }
+  // }
+
+  // Test 3
+  // Check for PF Nexus session (staging)
+  const sessionId = req.cookies.get("sessionId")?.value;
+  console.log("middleware 1 sessionId: " + sessionId)
   
-  if (host?.includes('datarooms.staging-pfnexus.com') && 
-      sessionId && 
-      !path.startsWith('/api/') &&
-      !path.startsWith('/_next/') &&
-      path !== '/pfnexus-auto-signin') {
-    
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Only check on datarooms subdomain and if accessing protected routes
+  if (
+    host?.includes("datarooms.staging-pfnexus.com") &&
+    sessionId &&
+    !path.startsWith("/api/") &&
+    !path.startsWith("/_next/") &&
+    !path.startsWith("/login") &&
+    !path.startsWith("/register")
+  ) {
+    console.log("middleware 2")
+    // Check if user already has NextAuth session
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    console.log("middleware 2, token: " + token)
     
     if (!token) {
-      // Redirect to a page that will trigger signin
-      return NextResponse.redirect(new URL('/pfnexus-auto-signin', req.url));
+      // Validate PF Nexus session
+      try {
+        console.log("middleware 2, no token: ")
+        const response = await fetch(
+          "https://api.staging-pfnexus.com/api/access/session",
+          {
+            headers: {
+              Cookie: `sessionId=${sessionId}`,
+            },
+          },
+        );
+        
+        if (response.ok) {
+          console.log("middleware 4, session ok: ")
+          const { user } = await response.json();
+
+          // Create a session by redirecting to a custom signin endpoint
+          const url = new URL("/api/auth/pfnexus-signin", req.url);
+          url.searchParams.set("callbackUrl", req.url);
+          return NextResponse.redirect(url);
+        }
+      } catch (error) {
+        console.error("middleware - PF Nexus session validation failed:", error);
+      }
     }
   }
 
