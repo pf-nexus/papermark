@@ -94,6 +94,7 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
       return NextResponse.redirect(new URL("/pfnexus-auto-signin", req.url));
     } else {
       console.log("middleware 2 - token found, continuing to AppMiddleware");
+      console.log("middleware 2, token.sub:", token?.sub);
       // Token exists, continue to normal flow
     }
   }
