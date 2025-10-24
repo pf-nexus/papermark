@@ -54,89 +54,7 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   const path = req.nextUrl.pathname;
   const host = req.headers.get("host");
 
-  // NEW: Check for PF Nexus session (staging)
-  // const sessionId = req.cookies.get('sessionId');
-  // const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') ||
-  //                       req.cookies.get('next-auth.session-token');
-
-  // Only check on datarooms subdomain
-  // if (host?.includes('datarooms.staging-pfnexus.com') &&
-  //     sessionId &&
-  //     !nextAuthToken &&
-  //     !path.startsWith('/api/auth')) {
-  //   // Has PF Nexus session but no NextAuth session
-  //   // Redirect to NextAuth callback to create session
-  //   return NextResponse.redirect(
-  //     new URL(`/api/auth/callback/pfnexus`, req.url)
-  //   );
-  // }
-
-  // Test 2
-  // const sessionId = req.cookies.get('sessionId')?.value;
-
-  // if (host?.includes('datarooms.staging-pfnexus.com') &&
-  //     sessionId &&
-  //     !path.startsWith('/api/') &&
-  //     !path.startsWith('/_next/') &&
-  //     path !== '/pfnexus-auto-signin') {
-
-  //   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
-  //   if (!token) {
-  //     // Redirect to a page that will trigger signin
-  //     return NextResponse.redirect(new URL('/pfnexus-auto-signin', req.url));
-  //   }
-  // }
-
-  // Test 3
-  // Check for PF Nexus session (staging)
-  const sessionId = req.cookies.get("sessionId")?.value;
-  console.log("middleware 1 sessionId: " + sessionId)
-  
-  // Only check on datarooms subdomain and if accessing protected routes
-  if (
-    host?.includes("datarooms.staging-pfnexus.com") &&
-    sessionId &&
-    !path.startsWith("/api/") &&
-    !path.startsWith("/_next/") &&
-    !path.startsWith("/login") &&
-    !path.startsWith("/register")
-  ) {
-    console.log("middleware 2")
-    // Check if user already has NextAuth session
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-    console.log("middleware 2, token: " + token)
-    
-    if (!token) {
-      // Validate PF Nexus session
-      try {
-        console.log("middleware 2, no token: ")
-        const response = await fetch(
-          "https://api.staging-pfnexus.com/api/access/session",
-          {
-            headers: {
-              Cookie: `sessionId=${sessionId}`,
-            },
-          },
-        );
-        
-        if (response.ok) {
-          console.log("middleware 4, session ok: ")
-          const { user } = await response.json();
-
-          // Create a session by redirecting to a custom signin endpoint
-          const url = new URL("/api/auth/pfnexus-signin", req.url);
-          url.searchParams.set("callbackUrl", req.url);
-          return NextResponse.redirect(url);
-        }
-      } catch (error) {
-        console.error("middleware - PF Nexus session validation failed:", error);
-      }
-    }
-  }
+  console.log("middleware 1 path:", path);
 
   if (isAnalyticsPath(path)) {
     return PostHogMiddleware(req);
@@ -145,6 +63,39 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   // Handle incoming webhooks
   if (isWebhookPath(host)) {
     return IncomingWebhookMiddleware(req);
+  }
+
+  // PF Nexus SSO Check - Do this BEFORE other middleware
+  const sessionId = req.cookies.get("sessionId")?.value;
+
+  if (
+    host?.includes("datarooms.staging-pfnexus.com") &&
+    sessionId &&
+    !path.startsWith("/api/") &&
+    !path.startsWith("/_next/") &&
+    !path.startsWith("/login") &&
+    !path.startsWith("/register") &&
+    path !== "/pfnexus-auto-signin"
+  ) {
+    console.log("middleware 2 - checking PF Nexus session");
+
+    const token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    console.log("middleware 2, token exists:", !!token);
+
+    if (!token) {
+      console.log(
+        "middleware 2 - no token, redirecting to pfnexus-auto-signin",
+      );
+      // Redirect to a page that will trigger signin
+      return NextResponse.redirect(new URL("/pfnexus-auto-signin", req.url));
+    } else {
+      console.log("middleware 2 - token found, continuing to AppMiddleware");
+      // Token exists, continue to normal flow
+    }
   }
 
   // For custom domains, we need to handle them differently
@@ -158,6 +109,20 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
     !path.startsWith("/verify") &&
     !path.startsWith("/unsubscribe")
   ) {
+    console.log("middleware 3 - calling AppMiddleware");
+
+    // DEBUG: Check token one more time
+    const tokenCheck = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+
+    console.log(
+      "middleware 3 - token before AppMiddleware:",
+      !!tokenCheck,
+      tokenCheck?.sub,
+    );
+
     return AppMiddleware(req);
   }
 
