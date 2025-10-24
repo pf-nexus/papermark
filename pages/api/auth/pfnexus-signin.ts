@@ -76,20 +76,22 @@ export default async function handler(
     console.log("pfnexus-signin VERCEL_ENV " + process.env.VERCEL_ENV);
     console.log("pfnexus-signin VERCEL_URL " + process.env.VERCEL_URL);
 
-    const cookieName = isVercelDeployment
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
+    // const cookieName = isVercelDeployment
+    //   ? "__Secure-next-auth.session-token"
+    //   : "next-auth.session-token";
 
-    const cookieDomain = isVercelDeployment
-      ? isProduction
-        ? ".papermark.com"
-        : ".staging-pfnexus.com"
-      : undefined;
+    // const cookieDomain = isVercelDeployment
+    //   ? isProduction
+    //     ? ".papermark.com"
+    //     : ".staging-pfnexus.com"
+    //   : undefined;
 
-    res.setHeader(
-      "Set-Cookie",
-      `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; ${cookieDomain ? `Domain=${cookieDomain}; ` : ""}${isVercelDeployment ? "Secure; " : ""}Max-Age=${30 * 24 * 60 * 60}`,
-    );
+    const cookieName = "__Secure-next-auth.session-token";
+    const cookieDomain = ".staging-pfnexus.com";
+    const cookieValue = `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; ${cookieDomain ? `Domain=${cookieDomain}; ` : ""}${isVercelDeployment ? "Secure; " : ""}Max-Age=${30 * 24 * 60 * 60}`;
+    console.log("pfnexus-signin cookieValue:", cookieValue);
+
+    res.setHeader("Set-Cookie", cookieValue);
 
     console.log("pfnexus-signin set cookie, redirecting to:", callbackUrl);
 
