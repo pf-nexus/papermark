@@ -117,29 +117,31 @@ export const authOptions: NextAuthOptions = {
       type: "credentials",
       credentials: {},
       async authorize(credentials, req) {
-        // Get the sessionId cookie from the request
+        // Get the user ID from the temporary cookie we set
         const cookies = req.headers?.cookie;
-        const sessionId = cookies?.match(/sessionId=([^;]+)/)?.[1];
-        
-        if (!sessionId) return null;
-        
-        // Validate with PF Nexus backend (staging)
-        const response = await fetch('https://api.staging-pfnexus.com/access/session', {
-          headers: {
-            Cookie: `sessionId=${sessionId}`
-          }
+        const userId = cookies?.match(/pfnexus-user-id=([^;]+)/)?.[1];
+
+        console.log("PF Nexus authorize - userId:", userId);
+
+        if (!userId) {
+          console.log("No pfnexus-user-id cookie found");
+          return null;
+        }
+
+        // Get the user from database
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
         });
-        
-        if (!response.ok) return null;
-        
-        const { user } = await response.json();
-        
-        // Map to NextAuth user format
+
+        console.log("PF Nexus authorize - user found:", !!user);
+
+        if (!user) return null;
+
         return {
-          id: user.id.toString(),
+          id: user.id,
           email: user.email,
-          name: `${user.firstname} ${user.lastname}`,
-          image: null,
+          name: user.name,
+          //image: user.image,
         };
       },
     },
@@ -157,9 +159,9 @@ export const authOptions: NextAuthOptions = {
         //domain: VERCEL_DEPLOYMENT ? ".papermark.com" : undefined,
         domain: VERCEL_DEPLOYMENT ? ".staging-pfnexus.com" : undefined,
         // Update domain for staging
-        // domain: VERCEL_DEPLOYMENT 
-        //   ? (process.env.VERCEL_ENV === "production" 
-        //       ? ".papermark.com" 
+        // domain: VERCEL_DEPLOYMENT
+        //   ? (process.env.VERCEL_ENV === "production"
+        //       ? ".papermark.com"
         //       : ".staging-pfnexus.com")  // NEW: Use staging domain
         //  : undefined,
         secure: VERCEL_DEPLOYMENT,
@@ -238,12 +240,11 @@ const getAuthOptions = (req: NextApiRequest): NextAuthOptions => {
     callbacks: {
       ...authOptions.callbacks,
       signIn: async ({ user }) => {
-        
         if (!user.email) {
-          console.log("getAuthOptions user email")
+          console.log("getAuthOptions user email");
           return false;
         }
-        
+
         // if (!user.email || (await isBlacklistedEmail(user.email))) {
         //   await identifyUser(user.email ?? user.id);
         //   await trackAnalytics({

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
-import { encode } from "next-auth/jwt";
+//import { setCookie } from "nookies";
 
 import prisma from "@/lib/prisma";
 
@@ -39,7 +39,7 @@ export default async function handler(
     let user = await prisma.user.findUnique({
       where: { email: pfUser.email },
     });
-    console.log("pfnexus-signin user:", JSON.stringify(user));
+    console.log("pfnexus-signin existing user:", JSON.stringify(user));
 
     if (!user) {
       user = await prisma.user.create({
@@ -52,54 +52,37 @@ export default async function handler(
       console.log("pfnexus-signin created user:", JSON.stringify(user));
     }
 
-    // Create NextAuth JWT token manually
-    const token = await encode({
-      token: {
-        sub: user.id,
-        email: user.email,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          //image: user.image,
-          //emailVerified: user.emailVerified,
-          //createdAt: user.createdAt,
-        },
+    // Create an Account record for this user (required by NextAuth)
+    const existingAccount = await prisma.account.findFirst({
+      where: {
+        userId: user.id,
+        provider: "pfnexus",
       },
-      secret: process.env.NEXTAUTH_SECRET!,
-      maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
-    console.log("pfnexus-signin created token");
+    if (!existingAccount) {
+      await prisma.account.create({
+        data: {
+          userId: user.id,
+          type: "oauth",
+          provider: "pfnexus",
+          providerAccountId: pfUser.id.toString(),
+        },
+      });
+      console.log("pfnexus-signin created account");
+    }
 
-    // Set the NextAuth session cookie
-    const isProduction = process.env.VERCEL_ENV === "production";
-    const isVercelDeployment = !!process.env.VERCEL_URL;
+    //const cookieValue = `pfnexus-user-id=${user.id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=60; ${process.env.VERCEL_URL ? "Secure;" : ""}`;
+    const cookieValue = `pfnexus-user-id=${user.id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=60; Secure;`;
+    console.log("pfnexus-signin cookieValue: " + cookieValue);
 
-    console.log("pfnexus-signin VERCEL_ENV " + process.env.VERCEL_ENV);
-    console.log("pfnexus-signin VERCEL_URL " + process.env.VERCEL_URL);
-
-    // const cookieName = isVercelDeployment
-    //   ? "__Secure-next-auth.session-token"
-    //   : "next-auth.session-token";
-
-    // const cookieDomain = isVercelDeployment
-    //   ? isProduction
-    //     ? ".papermark.com"
-    //     : ".staging-pfnexus.com"
-    //   : undefined;
-
-    const cookieName = "__Secure-next-auth.session-token";
-    const cookieDomain = ".staging-pfnexus.com";
-    const cookieValue = `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; ${cookieDomain ? `Domain=${cookieDomain}; ` : ""}${isVercelDeployment ? "Secure; " : ""}Max-Age=${30 * 24 * 60 * 60}`;
-    console.log("pfnexus-signin cookieValue:", cookieValue);
-
+    // Store user ID in a temporary cookie that we'll use in the client
     res.setHeader("Set-Cookie", cookieValue);
 
-    console.log("pfnexus-signin set cookie, redirecting to:", callbackUrl);
+    console.log("pfnexus-signin redirecting to auto-signin page");
 
-    // Redirect to the callback URL
-    return res.redirect(callbackUrl);
+    // Redirect to a client-side page that will complete the signin
+    return res.redirect("/pfnexus-auto-signin-complete");
   } catch (error) {
     console.error("PF Nexus signin error:", error);
     return res.redirect("/login");
