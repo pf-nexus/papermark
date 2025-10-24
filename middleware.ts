@@ -122,6 +122,7 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
       !!tokenCheck,
       tokenCheck?.sub,
     );
+    console.log("middleware 3 - full token:", JSON.stringify(tokenCheck));
 
     return AppMiddleware(req);
   }

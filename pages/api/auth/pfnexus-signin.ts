@@ -56,11 +56,14 @@ export default async function handler(
     const token = await encode({
       token: {
         sub: user.id,
+        email: user.email,
         user: {
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
+          //image: user.image,
+          //emailVerified: user.emailVerified,
+          //createdAt: user.createdAt,
         },
       },
       secret: process.env.NEXTAUTH_SECRET!,
