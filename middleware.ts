@@ -8,6 +8,7 @@ import IncomingWebhookMiddleware, {
   isWebhookPath,
 } from "./lib/middleware/incoming-webhooks";
 import PostHogMiddleware from "./lib/middleware/posthog";
+import { getToken } from "next-auth/jwt";
 
 function isAnalyticsPath(path: string) {
   // Create a regular expression
@@ -53,20 +54,35 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   const host = req.headers.get("host");
 
   // NEW: Check for PF Nexus session (staging)
-  const sessionId = req.cookies.get('sessionId');
-  const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') || 
-                        req.cookies.get('next-auth.session-token');
+  // const sessionId = req.cookies.get('sessionId');
+  // const nextAuthToken = req.cookies.get('__Secure-next-auth.session-token') || 
+  //                       req.cookies.get('next-auth.session-token');
   
   // Only check on datarooms subdomain
+  // if (host?.includes('datarooms.staging-pfnexus.com') && 
+  //     sessionId && 
+  //     !nextAuthToken && 
+  //     !path.startsWith('/api/auth')) {
+  //   // Has PF Nexus session but no NextAuth session
+  //   // Redirect to NextAuth callback to create session
+  //   return NextResponse.redirect(
+  //     new URL(`/api/auth/callback/pfnexus`, req.url)
+  //   );
+  // }
+  const sessionId = req.cookies.get('sessionId')?.value;
+  
   if (host?.includes('datarooms.staging-pfnexus.com') && 
       sessionId && 
-      !nextAuthToken && 
-      !path.startsWith('/api/auth')) {
-    // Has PF Nexus session but no NextAuth session
-    // Redirect to NextAuth callback to create session
-    return NextResponse.redirect(
-      new URL(`/api/auth/callback/pfnexus`, req.url)
-    );
+      !path.startsWith('/api/') &&
+      !path.startsWith('/_next/') &&
+      path !== '/pfnexus-auto-signin') {
+    
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    
+    if (!token) {
+      // Redirect to a page that will trigger signin
+      return NextResponse.redirect(new URL('/pfnexus-auto-signin', req.url));
+    }
   }
 
   if (isAnalyticsPath(path)) {
