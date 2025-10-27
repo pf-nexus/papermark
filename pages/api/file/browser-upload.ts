@@ -12,6 +12,21 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
+  console.log("=== BLOB UPLOAD ENDPOINT ===");
+  console.log(
+    "NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST:",
+    process.env.NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST,
+  );
+  console.log(
+    "BLOB_READ_WRITE_TOKEN exists:",
+    !!process.env.BLOB_READ_WRITE_TOKEN,
+  );
+  console.log(
+    "NEXT_PUBLIC_UPLOAD_TRANSPORT:",
+    process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT,
+  );
+  console.log("===========================");
+
   const body = req.body as HandleUploadBody;
 
   try {
