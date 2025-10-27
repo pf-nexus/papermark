@@ -75,9 +75,18 @@ const putFileInVercel = async (file: File) => {
 
   let numPages: number = 1;
   // get page count for pdf files
+  // if (file.type === "application/pdf") {
+  //   const body = await file.arrayBuffer();
+  //   numPages = await getPagesCount(body);
+  // }
   if (file.type === "application/pdf") {
-    const body = await file.arrayBuffer();
-    numPages = await getPagesCount(body);
+    try {
+      const body = await file.arrayBuffer();
+      numPages = await getPagesCount(body);
+    } catch (error) {
+      console.warn("Failed to get page count, defaulting to 1:", error);
+      numPages = 1; // Default to 1 page if counting fails
+    }
   }
 
   return {
