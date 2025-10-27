@@ -220,6 +220,15 @@ export function AddDocumentModal({
     try {
       setUploading(true);
 
+      console.log(
+        "UPLOAD_TRANSPORT:",
+        process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT,
+      );
+      console.log(
+        "All NEXT_PUBLIC vars:",
+        Object.keys(process.env).filter((k) => k.startsWith("NEXT_PUBLIC_")),
+      );
+
       let contentType = currentFile.type;
       let supportedFileType = getSupportedContentType(contentType);
 

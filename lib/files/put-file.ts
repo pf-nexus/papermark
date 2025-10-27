@@ -42,6 +42,14 @@ export const putFile = async ({
 }> => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT;
 
+  // ADD THIS
+  console.log("=== UPLOAD DEBUG ===");
+  console.log("NEXT_PUBLIC_UPLOAD_TRANSPORT:", NEXT_PUBLIC_UPLOAD_TRANSPORT);
+  console.log("File size:", file.size);
+  console.log("File type:", file.type);
+  console.log("Will use multipart?", file.size > MULTIPART_THRESHOLD);
+  console.log("===================");
+
   const { type, data, numPages, fileSize } = await match(
     NEXT_PUBLIC_UPLOAD_TRANSPORT,
   )
