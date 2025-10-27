@@ -41,10 +41,12 @@ export const putFile = async ({
   fileSize: number | undefined;
 }> => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT;
+  const NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST = process.env.NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST;
 
   // ADD THIS
   console.log("=== UPLOAD DEBUG ===");
   console.log("NEXT_PUBLIC_UPLOAD_TRANSPORT:", NEXT_PUBLIC_UPLOAD_TRANSPORT);
+  console.log("NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST:", NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST);
   console.log("File size:", file.size);
   console.log("File type:", file.type);
   console.log("Will use multipart?", file.size > MULTIPART_THRESHOLD);
