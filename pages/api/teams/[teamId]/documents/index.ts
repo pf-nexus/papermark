@@ -296,7 +296,21 @@ export default async function handle(
       req.body,
     );
 
+    // ADD THIS DETAILED LOGGING
+    console.log("=== DOCUMENT VALIDATION ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("Validation success:", validationResult.success);
+
     if (!validationResult.success) {
+      console.log(
+        "Validation errors:",
+        JSON.stringify(validationResult.error.errors, null, 2),
+      );
+      console.log(
+        "Validation error details:",
+        JSON.stringify(validationResult.error.format(), null, 2),
+      );
+
       log({
         message: `Document upload validation failed for teamId: ${teamId}. Errors: ${JSON.stringify(validationResult.error.errors)}`,
         type: "error",
@@ -306,6 +320,12 @@ export default async function handle(
         details: validationResult.error.errors,
       });
     }
+
+    console.log(
+      "Validation passed! Data:",
+      JSON.stringify(validationResult.data, null, 2),
+    );
+    console.log("========================");
 
     const {
       name,

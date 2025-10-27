@@ -88,11 +88,16 @@ const createFilePathValidator = () => {
     .min(1, "File path is required")
     .refine(
       async (path) => {
+        console.log("=== FILE PATH VALIDATION ===");
+        console.log("Validating path:", path);
+
         // Case 1: Notion URLs - must start with notion domains
         if (path.startsWith("https://")) {
           try {
             const urlObj = new URL(path);
             const hostname = urlObj.hostname;
+
+            console.log("URL hostname:", hostname);
 
             // Valid notion domains
             const validNotionDomains = ["www.notion.so", "notion.so"];
@@ -104,11 +109,22 @@ const createFilePathValidator = () => {
             // Check for vercel blob storage
             let isVercelBlob = false;
             if (process.env.VERCEL_BLOB_HOST) {
+              console.log("VERCEL_BLOB_HOST:", process.env.VERCEL_BLOB_HOST);
               isVercelBlob = hostname.startsWith(process.env.VERCEL_BLOB_HOST);
+              console.log("isVercelBlob:", isVercelBlob);
+            } else {
+              console.log("VERCEL_BLOB_HOST not set!");
             }
+
+            console.log("isNotionSite:", isNotionSite);
+            console.log("isValidNotionDomain:", isValidNotionDomain);
 
             // If it's not a standard Notion domain or Vercel blob, check if it's a custom Notion domain
             if (!isNotionSite && !isValidNotionDomain && !isVercelBlob) {
+              console.log(
+                "Not a standard domain, checking for custom Notion domain...",
+              );
+
               try {
                 let pageId = parsePageId(path);
                 if (!pageId) {
@@ -117,22 +133,33 @@ const createFilePathValidator = () => {
                     pageId = pageIdFromSlug;
                   }
                 }
+                console.log("Custom Notion page ID:", pageId);
                 return !!pageId;
-              } catch {
+              } catch (err) {
+                console.log("Custom Notion check failed:", err);
                 return false;
               }
             }
 
-            return isNotionSite || isValidNotionDomain || isVercelBlob;
-          } catch {
+            const result = isNotionSite || isValidNotionDomain || isVercelBlob;
+            console.log("Final result:", result);
+            console.log("===========================");
+            return result;
+          } catch (err) {
+            console.log("URL parsing failed:", err);
+            console.log("===========================");
             return false;
           }
         }
 
         // Case 2: file storage paths - must match pattern: <id>/doc_<someId>/<name>.<ext>
+        console.log("Checking S3 path pattern...");
         const s3PathPattern =
           /^[a-zA-Z0-9_-]+\/doc_[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+$/;
-        return s3PathPattern.test(path);
+        const result = s3PathPattern.test(path);
+        console.log("S3 pattern match:", result);
+        console.log("===========================");
+        return result;
       },
       {
         message:
