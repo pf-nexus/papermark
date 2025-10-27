@@ -75,7 +75,8 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
     !path.startsWith("/_next/") &&
     !path.startsWith("/login") &&
     !path.startsWith("/register") &&
-    path !== "/pfnexus-auto-signin"
+    path !== "/pfnexus-auto-signin" &&
+    path !== "/pfnexus-auto-signin-complete"
   ) {
     console.log("middleware 2 - checking PF Nexus session");
 
@@ -108,7 +109,9 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
   if (
     !path.startsWith("/view/") &&
     !path.startsWith("/verify") &&
-    !path.startsWith("/unsubscribe")
+    !path.startsWith("/unsubscribe") &&
+    path !== "/pfnexus-auto-signin" && // ADD THIS
+    path !== "/pfnexus-auto-signin-complete" // ADD THIS
   ) {
     console.log("middleware 3 - calling AppMiddleware");
 
