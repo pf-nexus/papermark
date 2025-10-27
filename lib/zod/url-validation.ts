@@ -348,6 +348,16 @@ export const documentUploadSchema = z
           try {
             const urlObj = new URL(data.url);
             const hostname = urlObj.hostname;
+
+            // TODO workaround 
+            // Check for Vercel Blob URLs
+            if (
+              process.env.VERCEL_BLOB_HOST &&
+              hostname.startsWith(process.env.VERCEL_BLOB_HOST)
+            ) {
+              return true;
+            }
+
             const isStandardNotion =
               hostname === "www.notion.so" ||
               hostname === "notion.so" ||
