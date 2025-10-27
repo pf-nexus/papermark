@@ -41,12 +41,16 @@ export const putFile = async ({
   fileSize: number | undefined;
 }> => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT;
-  const NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST = process.env.NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST;
+  const NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST =
+    process.env.NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST;
 
   // ADD THIS
   console.log("=== UPLOAD DEBUG ===");
   console.log("NEXT_PUBLIC_UPLOAD_TRANSPORT:", NEXT_PUBLIC_UPLOAD_TRANSPORT);
-  console.log("NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST:", NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST);
+  console.log(
+    "NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST:",
+    NEXT_PRIVATE_UPLOAD_DISTRIBUTION_HOST,
+  );
   console.log("File size:", file.size);
   console.log("File type:", file.type);
   console.log("Will use multipart?", file.size > MULTIPART_THRESHOLD);
@@ -69,34 +73,76 @@ export const putFile = async ({
   return { type, data, numPages, fileSize };
 };
 
+// const putFileInVercel = async (file: File) => {
+//   const newBlob = await upload(file.name, file, {
+//     access: "public",
+//     handleUploadUrl: "/api/file/browser-upload",
+//   });
+
+//   let numPages: number = 1;
+//   // get page count for pdf files
+//   // if (file.type === "application/pdf") {
+//   //   const body = await file.arrayBuffer();
+//   //   numPages = await getPagesCount(body);
+//   // }
+//   if (file.type === "application/pdf") {
+//     try {
+//       const body = await file.arrayBuffer();
+//       numPages = await getPagesCount(body);
+//     } catch (error) {
+//       console.warn("Failed to get page count, defaulting to 1:", error);
+//       numPages = 1; // Default to 1 page if counting fails
+//     }
+//   }
+
+//   return {
+//     type: DocumentStorageType.VERCEL_BLOB,
+//     data: newBlob.url,
+//     numPages: numPages,
+//     fileSize: file.size,
+//   };
+// };
+
 const putFileInVercel = async (file: File) => {
-  const newBlob = await upload(file.name, file, {
-    access: "public",
-    handleUploadUrl: "/api/file/browser-upload",
-  });
+  console.log("=== putFileInVercel START ===");
+  console.log("File name:", file.name);
+  console.log("File type:", file.type);
+  console.log("File size:", file.size);
 
-  let numPages: number = 1;
-  // get page count for pdf files
-  // if (file.type === "application/pdf") {
-  //   const body = await file.arrayBuffer();
-  //   numPages = await getPagesCount(body);
-  // }
-  if (file.type === "application/pdf") {
-    try {
-      const body = await file.arrayBuffer();
-      numPages = await getPagesCount(body);
-    } catch (error) {
-      console.warn("Failed to get page count, defaulting to 1:", error);
-      numPages = 1; // Default to 1 page if counting fails
+  try {
+    console.log("Calling upload()...");
+    const newBlob = await upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: "/api/file/browser-upload",
+    });
+    console.log("Upload successful! Blob URL:", newBlob.url);
+
+    let numPages: number = 1;
+    // get page count for pdf files
+    if (file.type === "application/pdf") {
+      try {
+        console.log("Attempting to get page count...");
+        const body = await file.arrayBuffer();
+        numPages = await getPagesCount(body);
+        console.log("Page count:", numPages);
+      } catch (error) {
+        console.warn("Failed to get page count, defaulting to 1:", error);
+        numPages = 1;
+      }
     }
-  }
 
-  return {
-    type: DocumentStorageType.VERCEL_BLOB,
-    data: newBlob.url,
-    numPages: numPages,
-    fileSize: file.size,
-  };
+    console.log("=== putFileInVercel SUCCESS ===");
+    return {
+      type: DocumentStorageType.VERCEL_BLOB,
+      data: newBlob.url,
+      numPages: numPages,
+      fileSize: file.size,
+    };
+  } catch (error) {
+    console.error("=== putFileInVercel FAILED ===");
+    console.error("Error:", error);
+    throw error; // Re-throw so we can see it
+  }
 };
 
 // Multipart upload threshold: 10MB
